@@ -100,20 +100,33 @@ function inLastDays(date: string, days: number) {
   return Date.parse(date) >= Date.now() - days * 86_400_000
 }
 
-export async function loadLocalEvents(state: State, signal: AbortSignal) {
+export async function loadLocalEvents(state: State, signal: AbortSignal, days: number) {
   const area = await stateArea(state)
   const { west, south, east, north } = bounds(area)
+  const now = Date.now()
+  const start = new Date(now - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+  const end = new Date(now).toISOString().slice(0, 10)
   const { events } = await getJson<{ events: NaturalEvent[] }>(eonetUrl, {
     bbox: [west, north, east, south].join(','),
-    category: Object.keys(localCategories).join(','), status: 'all', days: '30',
+    category: Object.keys(localCategories).join(','), status: 'all', start, end,
   }, signal)
   return events.flatMap(event => {
-    const local = event.geometry.filter(shape => inLastDays(shape.date, 30) &&
-      (shape.type === 'Point' ? contains(area, shape.coordinates) : booleanIntersects(area, shape)))
-    const date = local.map(shape => shape.date).sort().at(-1)
-    return date ? [{ ...eventRow(event, date), categories: event.categories.map(({ id }) => id) }] : []
+    const observations = new Map<string, string>()
+    for (const shape of event.geometry) {
+      const day = shape.date.slice(0, 10)
+      if (day < start || day > end) continue
+      const intersects = shape.type === 'Point' ? contains(area, shape.coordinates) : booleanIntersects(area, shape)
+      if (!intersects) continue
+
+      const month = day.slice(0, 7)
+      if (shape.date > (observations.get(month) ?? '')) observations.set(month, shape.date)
+    }
+    const date = [...observations.values()].sort().at(-1)
+    return date ? [{ ...eventRow(event, date), categories: event.categories.map(({ id }) => id), observations }] : []
   }).sort((a, b) => b.date.localeCompare(a.date))
 }
+
+export type LocalEvent = Awaited<ReturnType<typeof loadLocalEvents>>[number]
 
 export async function loadVolcanoes(_state: State, signal: AbortSignal) {
   const { events } = await getJson<{ events: NaturalEvent[] }>(eonetUrl, {

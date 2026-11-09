@@ -1,13 +1,22 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import type { State } from '../../data/states'
 import { categories, describeWeather, loadLocalEvents, loadQuakes, loadVolcanoes, loadWeather,
-  localCategories, sourceLinks, type Category, type EventRow, type LocalCategory } from '../../data/nature'
+  localCategories, sourceLinks, type Category, type EventRow, type LocalCategory, type LocalEvent } from '../../data/nature'
 
 const defaults: Category[] = ['weather', 'quakes', 'wildfires']
 const preferenceKey = 'geopulsobr:categories:v1'
 const number = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 })
 const day = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', timeZone: 'UTC' })
+const eventDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeZone: 'UTC' })
+const monthLabel = new Intl.DateTimeFormat('pt-BR', { month: 'short', year: 'numeric', timeZone: 'UTC' })
 const weekday = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: 'UTC' })
+
+const periods = [
+  { days: 30, label: 'Últimos 30 dias' },
+  { days: 90, label: 'Últimos 90 dias' },
+  { days: 365, label: 'Últimos 365 dias' },
+  { days: 1095, label: 'Últimos 1.095 dias (cerca de 3 anos)' },
+]
 
 function readPreferences() {
   try {
@@ -17,21 +26,21 @@ function readPreferences() {
   return defaults
 }
 
-type Request<T> = { attempt: number; data: T } | { attempt: number; failed: true }
 type Loader<T> = (state: State, signal: AbortSignal) => Promise<T>
+type Request<T> = { attempt: number; load: Loader<T> } & ({ data: T } | { failed: true })
 
 function useSource<T>(state: State, enabled: boolean, load: Loader<T>) {
   const [attempt, setAttempt] = useState(0)
   const [result, setResult] = useState<Request<T>>()
-  const current = result?.attempt === attempt ? result : undefined
+  const current = result?.attempt === attempt && result.load === load ? result : undefined
 
   useEffect(() => {
     if (!enabled || current) return
     const controller = new AbortController()
     load(state, controller.signal).then(data => {
-      if (!controller.signal.aborted) setResult({ attempt, data })
+      if (!controller.signal.aborted) setResult({ attempt, load, data })
     }).catch(() => {
-      if (!controller.signal.aborted) setResult({ attempt, failed: true })
+      if (!controller.signal.aborted) setResult({ attempt, load, failed: true })
     })
     return () => controller.abort()
   }, [state, enabled, load, current, attempt])
@@ -42,11 +51,12 @@ function useSource<T>(state: State, enabled: boolean, load: Loader<T>) {
   }
 }
 
-function SourceCard<T>({ title, label, source, request, children }: {
+function SourceCard<T>({ title, label, source, request, controls, children }: {
   title: string
   label: string
   source: { name: string; url: string }
   request: ReturnType<typeof useSource<T>>
+  controls?: ReactNode
   children: (data: T) => ReactNode
 }) {
   return (
@@ -55,6 +65,7 @@ function SourceCard<T>({ title, label, source, request, children }: {
         <div><h3>{title}</h3><p>{label}</p></div>
         <a href={source.url} target="_blank" rel="noreferrer">{source.name} ↗</a>
       </header>
+      {controls}
       {!request.result ? <p className="pulse-status" role="status">Buscando dados…</p>
         : 'failed' in request.result ? <div className="pulse-status">
           <p role="status">Fonte indisponível no momento.</p>
@@ -81,24 +92,76 @@ function externalLink(url: string) {
   } catch { return undefined }
 }
 
-function EventList({ events }: { events: EventRow[] }) {
-  if (!events.length) return <p className="pulse-status">Nenhum registro encontrado no período.</p>
+function EventList({ events, historical = false }: { events: EventRow[]; historical?: boolean }) {
+  if (!events.length) return <p className="pulse-status">Nenhum registro no catálogo para esse recorte.</p>
   return (
     <ul className="pulse-events">{events.map(event => (
       <li key={event.id}>
         <a href={externalLink(event.url)} target="_blank" rel="noreferrer">{event.title} ↗</a>
-        <span>{day.format(new Date(event.date))} · {event.active ? 'Em aberto' : 'Encerrado'}</span>
+        <span>{(historical ? eventDate : day).format(new Date(event.date))} · {event.active ? 'Em aberto' : 'Encerrado'}</span>
       </li>
     ))}</ul>
   )
 }
 
+function LocalHistory({ events, selected }: { events: LocalEvent[]; selected: LocalCategory[] }) {
+  const [month, setMonth] = useState('')
+  const matching = events.filter(event => selected.some(id => event.categories.includes(id)))
+  const counts = new Map<string, number>()
+  for (const event of matching) {
+    for (const key of event.observations.keys()) counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  const months = [...counts.keys()].sort().reverse()
+  const max = Math.max(1, ...counts.values())
+  const activeMonth = counts.has(month) ? month : ''
+  const visible = activeMonth
+    ? matching.flatMap(event => {
+        const date = event.observations.get(activeMonth)
+        return date ? [{ ...event, date }] : []
+      }).sort((a, b) => b.date.localeCompare(a.date))
+    : matching
+
+  return (
+    <>
+      {months.length > 0 && (
+        <details className="pulse-history">
+          <summary>Histórico por mês{activeMonth && ' · ' + monthLabel.format(new Date(activeMonth + '-01'))}</summary>
+          <p>Escolha um mês para filtrar a lista. Cada barra conta os eventos observados naquele mês.</p>
+          <button type="button" aria-pressed={!activeMonth} onClick={() => setMonth('')}>Todo o período</button>
+          <ul aria-label="Meses com registros">
+            {months.map(key => {
+              const count = counts.get(key) ?? 0
+              return (
+                <li key={key}>
+                  <button type="button" aria-pressed={activeMonth === key} onClick={() => setMonth(key)}>
+                    <span>{monthLabel.format(new Date(key + '-01'))}</span>
+                    <span className="pulse-history-track" aria-hidden="true"><span style={{ width: count / max * 100 + '%' }} /></span>
+                    <span>{count} <span className="pulse-history-count">{count === 1 ? 'evento' : 'eventos'}</span></span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </details>
+      )}
+      {selected.map(id => (
+        <section key={id} className="pulse-event-group">
+          <h4>{localCategories[id]}</h4>
+          <EventList events={visible.filter(event => event.categories.includes(id))} historical />
+        </section>
+      ))}
+    </>
+  )
+}
+
 export default function NaturePanel({ state }: { state: State }) {
   const [selected, setSelected] = useState<Category[]>(readPreferences)
+  const [days, setDays] = useState(30)
   const local = selected.filter((id): id is LocalCategory => Object.hasOwn(localCategories, id))
   const weather = useSource(state, selected.includes('weather'), loadWeather)
   const quakes = useSource(state, selected.includes('quakes'), loadQuakes)
-  const localEvents = useSource(state, Boolean(local.length), loadLocalEvents)
+  const loadHistory = useCallback((state: State, signal: AbortSignal) => loadLocalEvents(state, signal, days), [days])
+  const localEvents = useSource(state, Boolean(local.length), loadHistory)
   const volcanoes = useSource(state, selected.includes('volcanoes'), loadVolcanoes)
 
   function toggle(category: Category) {
@@ -158,13 +221,17 @@ export default function NaturePanel({ state }: { state: State }) {
           </SourceCard>
         )}
         {local.length > 0 && (
-          <SourceCard title="Eventos no estado" label={state.uf + ' · últimos 30 dias'} source={sources.eonet} request={localEvents}>
-            {events => <div className="pulse-event-groups">{local.map(id => (
-              <section key={id} className="pulse-event-group">
-                <h4>{localCategories[id]}</h4>
-                <EventList events={events.filter(event => event.categories.includes(id))} />
-              </section>
-            ))}</div>}
+          <SourceCard title="Eventos no estado" label={state.uf + ' · catálogo de eventos observados'} source={sources.eonet} request={localEvents}
+            controls={
+              <div className="pulse-period">
+                <label htmlFor="pulse-period">Período dos eventos</label>
+                <select id="pulse-period" value={days} onChange={event => setDays(Number(event.target.value))}>
+                  {periods.map(({ days, label }) => <option key={days} value={days}>{label}</option>)}
+                </select>
+                <p>A cobertura do catálogo varia por região e categoria.</p>
+              </div>
+            }>
+            {events => <LocalHistory events={events} selected={local} />}
           </SourceCard>
         )}
         {selected.includes('volcanoes') && (
