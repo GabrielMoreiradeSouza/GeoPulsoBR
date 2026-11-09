@@ -1,96 +1,101 @@
-import Globe from 'react-globe.gl'
-import { useEffect, useState, useRef } from 'react'
+import Globe, { type GlobeMethods } from 'react-globe.gl'
+import { Component, useEffect, useState, useRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { bounds, loadStateFeatures, type StateFeature } from '../../data/geography'
+import { stateByUf, states } from '../../data/states'
+import earth from '../../assets/earth-dark.jpg'
+import sky from '../../assets/night-sky.png'
+import './home.css'
 
-export const HomePages = () => {
-  const [brazilData, setBrazilData] = useState({ features: [] })
-  const [selected, setSelected] = useState<string | null>(null)
-  const globeRef = useRef<any>(null)
+const viewport = () => ({ width: window.innerWidth, height: window.innerHeight })
+const sortedStates = [...states].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+
+class GlobeBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+
+  render() {
+    return this.state.failed ? <p className="map-unavailable" role="status">Globo indisponível. Use a lista de estados.</p> : this.props.children
+  }
+}
+
+function Explorer() {
+  const [features, setFeatures] = useState<StateFeature[]>([])
+  const [mapError, setMapError] = useState(false)
+  const [size, setSize] = useState(viewport)
+  const [selected, setSelected] = useState('')
+  const [ready, setReady] = useState(false)
+  const globe = useRef<GlobeMethods | undefined>(undefined)
+  const timer = useRef<number | undefined>(undefined)
   const navigate = useNavigate()
 
   useEffect(() => {
-    fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson')
-      .then(r => r.json())
-      .then(setBrazilData)
+    let mounted = true
+    loadStateFeatures().then(data => { if (mounted) setFeatures(data) })
+      .catch(() => { if (mounted) setMapError(true) })
+    const resize = () => setSize(viewport())
+    window.addEventListener('resize', resize)
+    return () => {
+      mounted = false
+      window.removeEventListener('resize', resize)
+      window.clearTimeout(timer.current)
+    }
   }, [])
 
-  useEffect(() => {
-    if (globeRef.current) {
-      globeRef.current.pointOfView({ lat: -14.2350, lng: -51.9253, altitude: 1.2 }, 1000)
+  function openState(uf: string) {
+    const state = stateByUf.get(uf)
+    if (!state || selected) return
+    if (state.image) new Image().src = state.image
+    const feature = features.find(item => item.properties.uf === uf)
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (!feature || !ready || !globe.current || reducedMotion) {
+      navigate('/estado/' + state.slug, { viewTransition: !reducedMotion })
+      return
     }
-  }, [brazilData])
 
-  function getCentroid(geometry: any): { lat: number; lng: number } {
-    const coords = geometry.type === 'MultiPolygon'
-      ? geometry.coordinates.flat(2)
-      : geometry.coordinates.flat(1)
-
-    const lat = coords.reduce((sum: number, c: number[]) => sum + c[1], 0) / coords.length
-    const lng = coords.reduce((sum: number, c: number[]) => sum + c[0], 0) / coords.length
-
-    return { lat, lng }
-  }
-
-  function handleClick(polygon: any) {
-    const name = polygon.properties.name
-    setSelected(name)
-
-    const { lat, lng } = getCentroid(polygon.geometry)
-    globeRef.current.pointOfView({ lat, lng, altitude: 0.08 }, 1200)
-
-    
-    setTimeout(() => {
-      const slug = name
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, '-')
-
-      navigate(`/estado/${slug}`, { viewTransition: true })
-    }, 1300)
+    setSelected(uf)
+    const { west, east, south, north } = bounds(feature.geometry)
+    globe.current.pointOfView({ lat: (south + north) / 2, lng: (west + east) / 2, altitude: 0.08 }, 1200)
+    timer.current = window.setTimeout(() => navigate('/estado/' + state.slug, { viewTransition: true }), 1300)
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#0a0a0a', position: 'relative' }}>
-      <Globe
-        ref={globeRef}
-        globeImageUrl="//unpkg.com/three-globe/example/img/earth-dark.jpg"
-        backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
-        polygonsData={brazilData.features}
-        polygonAltitude={(d: any) => d.properties.name === selected ? 0.06 : 0.01}
-        polygonCapColor={(d: any) =>
-          d.properties.name === selected
-            ? 'rgba(29, 158, 117, 0.7)'
-            : 'rgba(29, 158, 117, 0.2)'
-        }
-        polygonSideColor={() => 'rgba(29, 158, 117, 0.4)'}
-        polygonStrokeColor={() => '#1D9E75'}
-        polygonLabel={(d: any) => `<b style="color:#1D9E75">${d.properties.name}</b>`}
-        onPolygonClick={(polygon: any) => handleClick(polygon)}
-        width={window.innerWidth}
-        height={window.innerHeight}
-      />
-
-      {selected && (
-        <div style={{
-          position: 'absolute',
-          top: 24,
-          left: 24,
-          background: 'rgba(10,10,10,0.85)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(29,158,117,0.4)',
-          borderRadius: 12,
-          padding: '16px 20px',
-          color: '#fff',
-          minWidth: 200,
-        }}>
-          <p style={{ margin: 0, fontSize: 11, color: '#1D9E75' }}>ESTADO SELECIONADO</p>
-          <h2 style={{ margin: '4px 0 0', fontSize: 20 }}>{selected}</h2>
-          <p style={{ margin: '6px 0 0', fontSize: 11, color: '#555' }}>navegando...</p>
-        </div>
-      )}
-    </div>
+    <main className="explorer">
+      {!mapError && <GlobeBoundary><Globe
+        ref={globe}
+        globeImageUrl={earth}
+        backgroundImageUrl={sky}
+        onGlobeReady={() => {
+          setReady(true)
+          globe.current?.pointOfView({ lat: -14.235, lng: -51.9253, altitude: 1.2 },
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1000)
+        }}
+        polygonsData={features}
+        polygonAltitude={d => (d as StateFeature).properties.uf === selected ? 0.06 : 0.01}
+        polygonCapColor={d => (d as StateFeature).properties.uf === selected ? 'rgba(29,158,117,0.7)' : 'rgba(29,158,117,0.2)'}
+        polygonSideColor={() => 'rgba(29,158,117,0.4)'}
+        polygonStrokeColor={() => '#1d9e75'}
+        polygonLabel={d => stateByUf.get((d as StateFeature).properties.uf)?.name ?? ''}
+        onPolygonClick={d => openState((d as StateFeature).properties.uf)}
+        {...size}
+      /></GlobeBoundary>}
+      <header className="explorer-card">
+        <p className="explorer-brand"><span aria-hidden="true">◉</span> GeoPulsoBR</p>
+        <h1>Explore o Brasil</h1>
+        <p>Escolha um estado para ver o tempo e os eventos naturais.</p>
+        {mapError && <p role="status">Mapa indisponível. Escolha pela lista abaixo.</p>}
+        <label htmlFor="state-select">Unidade federativa</label>
+        <select id="state-select" value={selected} disabled={Boolean(selected)} onChange={event => openState(event.target.value)}>
+          <option value="" disabled>Selecione um estado</option>
+          {sortedStates.map(state => <option key={state.uf} value={state.uf}>{state.name}</option>)}
+        </select>
+        {selected && <p role="status">Abrindo {stateByUf.get(selected)?.name}…</p>}
+      </header>
+    </main>
   )
 }
 
-export default HomePages
+export default Explorer

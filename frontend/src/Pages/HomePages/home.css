@@ -1,0 +1,19 @@
+.explorer { position: relative; width: 100%; height: 100%; background: #0a0a0a; }
+.explorer-card {
+  position: absolute;
+  z-index: 1;
+  inset: 1.25rem auto auto 1.25rem;
+  width: min(18rem, calc(100% - 2.5rem));
+  background: rgba(10,17,15,.88);
+  backdrop-filter: blur(14px);
+  border: 1px solid #285344;
+  padding: 1rem 1.1rem;
+  border-radius: .85rem;
+}
+.explorer-brand { color: #7ee9c0; font-weight: 750; letter-spacing: .08em; font-size: .82rem; }
+.explorer-card h1 { font-size: 1.4rem; margin-top: .2rem; }
+.explorer-card > p:not(.explorer-brand) { color: #bdd0c7; font-size: .88rem; }
+.explorer-card label { display: block; margin-top: .8rem; font-size: .8rem; }
+.explorer-card select { width: 100%; padding: .38rem .5rem; border-radius: .35rem; border: 1px solid #3b6a5a; background: #13231c; }
+.map-unavailable { position: absolute; inset: 50% 1rem auto; text-align: center; color: #bdd0c7; }
+@media (max-width: 600px) { .explorer-card { inset: auto auto 1rem 1rem; } }

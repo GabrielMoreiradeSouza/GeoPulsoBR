@@ -1,0 +1,100 @@
+{
+  "para": {
+    "place": "Theatro da Paz",
+    "author": "João paulo da costa guimarães",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "url": "https://commons.wikimedia.org/wiki/File:Teatro_da_Paz_3.jpg"
+  },
+  "paraiba": {
+    "place": "Farol do Cabo Branco",
+    "author": "Pbendito (atribuído pelo Wikimedia Commons)",
+    "license": "CC BY-SA 2.5",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.5",
+    "url": "https://commons.wikimedia.org/wiki/File:Joao_Pessoa_Paraiba_Farol_do_Cabo_Branco2.jpg"
+  },
+  "parana": {
+    "place": "Cataratas do Iguaçu",
+    "author": "Mariordo (Mario Roberto Durán Ortiz)",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "url": "https://commons.wikimedia.org/wiki/File:Aerial_Foz_de_Igua%C3%A7u_26_Nov_2005.jpg"
+  },
+  "pernambuco": {
+    "place": "Centro Histórico de Olinda",
+    "author": "Prefeitura de Olinda from Brasil",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "url": "https://commons.wikimedia.org/wiki/File:Vista_do_S%C3%ADtio_Hist%C3%B3rico_de_Olinda-PE-br.jpg"
+  },
+  "piaui": {
+    "place": "Parque Nacional da Serra da Capivara",
+    "author": "Diego Rego Monteiro",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "url": "https://commons.wikimedia.org/wiki/File:Canoas_-_Vale_Verde.JPG"
+  },
+  "rio-de-janeiro": {
+    "place": "Pão de Açúcar",
+    "author": "Arne Müseler",
+    "license": "CC BY-SA 3.0 de",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
+    "url": "https://commons.wikimedia.org/wiki/File:P%C3%A3o_de_A%C3%A7ucar_-_Sugarloaf_Mountain_-_Zuckerhut_-_2022.jpg"
+  },
+  "rio-grande-do-norte": {
+    "place": "Morro do Careca",
+    "author": "George Vale from Mossoró, Brasil",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "url": "https://commons.wikimedia.org/wiki/File:Morro_do_Careca_Natal.jpg"
+  },
+  "rio-grande-do-sul": {
+    "place": "Cânion Itaimbezinho",
+    "author": "Valdiney Pimenta from Campinas - SP, Brazil",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "url": "https://commons.wikimedia.org/wiki/File:Itaimb%C3%A9zinho_Canyon_2006.jpg"
+  },
+  "rondonia": {
+    "place": "Porto Velho",
+    "author": "Heitor Carvalho Jorge",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+    "url": "https://commons.wikimedia.org/wiki/File:Porto_Velho_RO.jpg"
+  },
+  "roraima": {
+    "place": "Monte Roraima",
+    "author": "Paolo Costa Baldi",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "url": "https://commons.wikimedia.org/wiki/File:Roraima3_(79).JPG"
+  },
+  "santa-catarina": {
+    "place": "Ponte Hercílio Luz",
+    "author": "Beto Quissak",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "url": "https://commons.wikimedia.org/wiki/File:Ponte_Hercilio_Luz_-_Florianopolis_-_Santa_Catarina.jpg"
+  },
+  "sao-paulo": {
+    "place": "Parque Ibirapuera",
+    "author": "Fernando Stankuns",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "url": "https://commons.wikimedia.org/wiki/File:Parque_do_ibirapuera_visto_do_c%C3%A9u.jpg"
+  },
+  "sergipe": {
+    "place": "Região de Xingó",
+    "author": "Trilha21",
+    "license": "Domínio público",
+    "licenseUrl": null,
+    "url": "https://commons.wikimedia.org/wiki/File:Xingo.JPG"
+  },
+  "tocantins": {
+    "place": "Jalapão",
+    "author": "aduarteweb",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+    "url": "https://commons.wikimedia.org/wiki/File:Dunas_do_Jalap%C3%A3o,_em_Mateiros.jpg"
+  }
+}
