@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { State } from '../../data/states'
 import { categories, describeWeather, loadLocalEvents, loadQuakes, loadVolcanoes, loadWeather,
   localCategories, sourceLinks, type Category, type EventRow, type LocalCategory, type LocalEvent } from '../../data/nature'
@@ -11,11 +11,12 @@ const eventDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeZon
 const monthLabel = new Intl.DateTimeFormat('pt-BR', { month: 'short', year: 'numeric', timeZone: 'UTC' })
 const weekday = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: 'UTC' })
 
+const longestPeriod = 1095
 const periods = [
   { days: 30, label: 'Últimos 30 dias' },
   { days: 90, label: 'Últimos 90 dias' },
   { days: 365, label: 'Últimos 365 dias' },
-  { days: 1095, label: 'Últimos 1.095 dias (cerca de 3 anos)' },
+  { days: longestPeriod, label: 'Últimos 3 anos (aprox.)' },
 ]
 
 function readPreferences() {
@@ -157,12 +158,16 @@ function LocalHistory({ events, selected }: { events: LocalEvent[]; selected: Lo
 export default function NaturePanel({ state }: { state: State }) {
   const [selected, setSelected] = useState<Category[]>(readPreferences)
   const [days, setDays] = useState(30)
+  const periodSelect = useRef<HTMLSelectElement>(null)
   const local = selected.filter((id): id is LocalCategory => Object.hasOwn(localCategories, id))
   const weather = useSource(state, selected.includes('weather'), loadWeather)
   const quakes = useSource(state, selected.includes('quakes'), loadQuakes)
   const loadHistory = useCallback((state: State, signal: AbortSignal) => loadLocalEvents(state, signal, days), [days])
   const localEvents = useSource(state, Boolean(local.length), loadHistory)
   const volcanoes = useSource(state, selected.includes('volcanoes'), loadVolcanoes)
+  const history = localEvents.result
+  const noLocalRecords = history && 'data' in history &&
+    !history.data.some(event => local.some(id => event.categories.includes(id)))
 
   function toggle(category: Category) {
     const next = selected.includes(category) ? selected.filter(id => id !== category) : [...selected, category]
@@ -225,10 +230,18 @@ export default function NaturePanel({ state }: { state: State }) {
             controls={
               <div className="pulse-period">
                 <label htmlFor="pulse-period">Período dos eventos</label>
-                <select id="pulse-period" value={days} onChange={event => setDays(Number(event.target.value))}>
+                <select id="pulse-period" ref={periodSelect} value={days} onChange={event => setDays(Number(event.target.value))}>
                   {periods.map(({ days, label }) => <option key={days} value={days}>{label}</option>)}
                 </select>
                 <p>A cobertura do catálogo varia por região e categoria.</p>
+                {noLocalRecords && days < longestPeriod && (
+                  <button className="pulse-action pulse-expand-period" type="button" onClick={() => {
+                    setDays(longestPeriod)
+                    periodSelect.current?.focus()
+                  }}>
+                    Buscar nos últimos 3 anos
+                  </button>
+                )}
               </div>
             }>
             {events => <LocalHistory events={events} selected={local} />}

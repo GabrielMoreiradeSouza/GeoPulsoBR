@@ -151,6 +151,7 @@
   font-size: .83rem;
 }
 .pulse-period p, .pulse-history p { color: #b8cfc3; font-size: .8rem; }
+.pulse-period .pulse-expand-period { justify-self: start; margin-top: .15rem; }
 .pulse-history { margin-top: .75rem; border-top: 1px solid #385748; padding-top: .6rem; }
 .pulse-history summary { cursor: pointer; font-size: .85rem; font-weight: 700; color: #a2f5d3; }
 .pulse-history p { margin: .4rem 0; }
